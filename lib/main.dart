@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/activity_screen.dart';
 import 'screens/reminders_screen.dart';
 import 'services/notification_service.dart';
+import 'analysis_screen_page.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,7 +50,7 @@ class _MainNavigationScreenState
     RemindersScreen(),
     FoodLoggingScreen(),
     Center(child: Text("Medical Records Screen")),
-    Center(child: Text("AI Analysis Screen")),
+    AnalysisScreen(),
   ];
 
   void _onItemTapped(int index) {
