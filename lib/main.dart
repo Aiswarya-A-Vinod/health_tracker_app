@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'analysis_screen_page.dart';
+
 
 void main() {
   runApp(HealthTrackerApp());
@@ -42,7 +44,7 @@ class _MainNavigationScreenState
     Center(child: Text("Reminders Screen")),
     FoodLoggingScreen(),
     Center(child: Text("Medical Records Screen")),
-    Center(child: Text("AI Analysis Screen")),
+    AnalysisScreen(),
   ];
 
   void _onItemTapped(int index) {
