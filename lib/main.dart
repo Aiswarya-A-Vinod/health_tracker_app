@@ -4,8 +4,13 @@ import 'package:intl/intl.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/activity_screen.dart';
+import 'screens/reminders_screen.dart';
+import 'services/notification_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.init();
   runApp(HealthTrackerApp());
 }
 
@@ -36,10 +41,11 @@ class _MainNavigationScreenState
     extends State<MainNavigationScreen> {
 
   int _selectedIndex = 2;
+  double userWeight=60.0;
 
   final List<Widget> _screens = [
-    Center(child: Text("Physical Activity Screen")),
-    Center(child: Text("Reminders Screen")),
+    ActivityScreen(userWeight:60.0),
+    RemindersScreen(),
     FoodLoggingScreen(),
     Center(child: Text("Medical Records Screen")),
     Center(child: Text("AI Analysis Screen")),
