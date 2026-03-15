@@ -147,6 +147,14 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
     await prefs.setStringList('meals', mealList);
   }
 
+  Future saveDailyCalories() async {
+     final prefs = await SharedPreferences.getInstance();
+
+    String today = DateTime.now().toString().split(" ")[0];
+
+     await prefs.setInt("eaten_$today", totalCalories);
+  }
+
   Future<void> loadMeals() async {
     final prefs = await SharedPreferences.getInstance();
     List<String>? mealList = prefs.getStringList('meals');
@@ -174,7 +182,8 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
       ),
     );
   });
-  saveMeals(); // SAVE AFTER ADDING
+  saveMeals(); 
+  saveDailyCalories(); // SAVE AFTER ADDING
 }
 }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/met_data.dart';
 import '../utils/met_calculator.dart';
 import '../models/activity.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ActivityScreen extends StatefulWidget {
   final double userWeight;
@@ -18,6 +19,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
   double? caloriesBurned;
 
   List<Activity> activities = [];
+  Future saveBurnedCalories(double burned) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String today = DateTime.now().toString().split(" ")[0];
+
+    await prefs.setDouble("burned_$today", burned);
+  }
 
   void calculate() {
     final duration = int.tryParse(durationController.text);
@@ -43,6 +51,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
         ),
       );
     });
+
+    saveBurnedCalories(result);
   }
 
   @override
