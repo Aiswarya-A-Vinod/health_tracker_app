@@ -8,6 +8,7 @@ import 'screens/activity_screen.dart';
 import 'screens/reminders_screen.dart';
 import 'services/notification_service.dart';
 import 'analysis_screen_page.dart';
+import 'screens/medical_records_screen.dart';
 
 
 void main() async {
@@ -49,7 +50,7 @@ class _MainNavigationScreenState
     ActivityScreen(userWeight:60.0),
     RemindersScreen(),
     FoodLoggingScreen(),
-    Center(child: Text("Medical Records Screen")),
+    MedicalRecordsScreen(),
     AnalysisScreen(),
   ];
 
