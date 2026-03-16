@@ -138,6 +138,12 @@ await saveActivities();
 }
   }
 
+  
+  @override
+void dispose() {
+  durationController.dispose();
+  super.dispose();
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
