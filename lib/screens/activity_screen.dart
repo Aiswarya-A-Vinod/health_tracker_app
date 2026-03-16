@@ -94,17 +94,18 @@ class _ActivityScreenState extends State<ActivityScreen> {
   }
 
   // CALCULATE CALORIES
-  void calculate() async {
-    final duration = int.tryParse(durationController.text);
-    if (duration == null) return;
+// CALCULATE CALORIES
+void calculate() async {
+  final duration = int.tryParse(durationController.text);
+  if (duration == null) return;
 
-    final met = metValues[selectedActivity]!;
+  final met = metValues[selectedActivity]!;
 
-    final result = calculateCalories(
-      met: met,
-      weight: widget.userWeight,
-      duration: duration,
-    );
+  final result = calculateCalories(
+    met: met,
+    weight: widget.userWeight,
+    duration: duration,
+  );
 
     setState(() {
       caloriesBurned = result;
@@ -119,14 +120,22 @@ class _ActivityScreenState extends State<ActivityScreen> {
       );
     });
 
+
     await saveBurnedCalories(totalCalories);
     await saveActivities();
+
+
+    saveActivities();
+
   }
 
   @override
   void initState() {
     super.initState();
     loadActivities();
+await saveBurnedCalories(totalCalories);
+await saveActivities();
+}
   }
 
   @override
