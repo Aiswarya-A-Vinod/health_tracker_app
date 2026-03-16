@@ -21,6 +21,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
   double? caloriesBurned;
 
   List<Activity> activities = [];
+  Future saveBurnedCalories(double burned) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String today = DateTime.now().toString().split(" ")[0];
+
+    await prefs.setDouble("burned_$today", burned);
+  }
 
   // FILTER TODAY'S ACTIVITIES
   List<Activity> get todayActivities {
@@ -111,6 +118,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
       );
     });
 
+
     saveActivities();
   }
 
@@ -118,6 +126,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
   void initState() {
     super.initState();
     loadActivities();
+
+    saveBurnedCalories(result);
+
   }
 
   @override

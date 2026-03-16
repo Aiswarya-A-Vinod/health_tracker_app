@@ -8,6 +8,7 @@ import 'screens/activity_screen.dart';
 import 'screens/reminders_screen.dart';
 import 'services/notification_service.dart';
 import 'analysis_screen_page.dart';
+import 'screens/medical_records_screen.dart';
 
 
 void main() async {
@@ -49,7 +50,7 @@ class _MainNavigationScreenState
     ActivityScreen(userWeight:60.0),
     RemindersScreen(),
     FoodLoggingScreen(),
-    Center(child: Text("Medical Records Screen")),
+    MedicalRecordsScreen(),
     AnalysisScreen(),
   ];
 
@@ -147,6 +148,14 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
     await prefs.setStringList('meals', mealList);
   }
 
+  Future saveDailyCalories() async {
+     final prefs = await SharedPreferences.getInstance();
+
+    String today = DateTime.now().toString().split(" ")[0];
+
+     await prefs.setInt("eaten_$today", totalCalories);
+  }
+
   Future<void> loadMeals() async {
     final prefs = await SharedPreferences.getInstance();
     List<String>? mealList = prefs.getStringList('meals');
@@ -174,7 +183,8 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
       ),
     );
   });
-  saveMeals(); // SAVE AFTER ADDING
+  saveMeals(); 
+  saveDailyCalories(); // SAVE AFTER ADDING
 }
 }
 
