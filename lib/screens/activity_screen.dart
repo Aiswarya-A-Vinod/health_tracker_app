@@ -22,6 +22,14 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   List<Activity> activities = [];
 
+  Future saveBurnedCalories(double burned) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String today = DateTime.now().toString().split(" ")[0];
+
+    await prefs.setDouble("burned_$today", burned);
+  }
+
   // FILTER TODAY'S ACTIVITIES
   List<Activity> get todayActivities {
     final now = DateTime.now();
@@ -86,7 +94,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
   }
 
   // CALCULATE CALORIES
-  void calculate() {
+  void calculate() async {
     final duration = int.tryParse(durationController.text);
     if (duration == null) return;
 
@@ -111,7 +119,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
       );
     });
 
-    saveActivities();
+    await saveBurnedCalories(totalCalories);
+    await saveActivities();
   }
 
   @override

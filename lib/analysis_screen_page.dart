@@ -1,8 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class AnalysisScreen extends StatelessWidget {
+class AnalysisScreen extends StatefulWidget {
   const AnalysisScreen({super.key});
+
+  @override
+  State<AnalysisScreen> createState() => _AnalysisScreenState();
+}
+
+class _AnalysisScreenState extends State<AnalysisScreen> {
+
+  int eaten = 0;
+  double burned = 0;
+
+  Future loadCalories() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String today = DateTime.now().toString().split(" ")[0];
+
+    setState(() {
+      eaten = prefs.getInt("eaten_$today") ?? 0;
+      burned = prefs.getDouble("burned_$today") ?? 0;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadCalories();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,6 +42,30 @@ class AnalysisScreen extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
+
+              Text(
+                "Calories Consumed: $eaten kcal",
+                style: const TextStyle(fontSize: 18),
+              ),
+
+              const SizedBox(height: 10),
+
+              Text(
+                "Calories Burned: ${burned.toStringAsFixed(0)} kcal",
+                style: const TextStyle(fontSize: 18),
+              ),
+
+              const SizedBox(height: 10),
+
+              Text(
+                "Net Calories: ${(eaten - burned).toStringAsFixed(0)} kcal",
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 40),
 
               const Text(
                 "Weekly Calories",
