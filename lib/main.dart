@@ -10,7 +10,6 @@ import 'services/notification_service.dart';
 import 'analysis_screen_page.dart';
 import 'screens/medical_records_screen.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.init();
@@ -93,6 +92,7 @@ class _MainNavigationScreenState
 }
 
 /* ---------------- FOOD LOGGING SCREEN ---------------- */
+
 class Meal {
   final String type;
   final String imagePath;
@@ -149,11 +149,9 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
   }
 
   Future saveDailyCalories() async {
-     final prefs = await SharedPreferences.getInstance();
-
+    final prefs = await SharedPreferences.getInstance();
     String today = DateTime.now().toString().split(" ")[0];
-
-     await prefs.setInt("eaten_$today", totalCalories);
+    await prefs.setInt("eaten_$today", totalCalories);
   }
 
   Future<void> loadMeals() async {
@@ -174,19 +172,20 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
         await _picker.pickImage(source: ImageSource.camera);
 
     if (photo != null && _selectedMeal != null) {
-  setState(() {
-    meals.add(
-      Meal(
-        type: _selectedMeal!,
-        imagePath: photo.path,
-        time: DateTime.now(),
-      ),
-    );
-  });
-  saveMeals(); 
-  saveDailyCalories(); // SAVE AFTER ADDING
-}
-}
+      setState(() {
+        meals.add(
+          Meal(
+            type: _selectedMeal!,
+            imagePath: photo.path,
+            time: DateTime.now(),
+          ),
+        );
+      });
+
+      saveMeals();
+      saveDailyCalories();
+    }
+  }
 
   void _selectMeal(String meal) {
     setState(() {
@@ -223,8 +222,6 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
 
                 SizedBox(height: 30),
 
-                /* -------- ADD NEW MEAL BUTTON -------- */
-
                 GestureDetector(
                   onTap: () {
                     showModalBottomSheet(
@@ -251,29 +248,25 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
                               ),
                               SizedBox(height: 20),
                               ListTile(
-                                leading:
-                                    Icon(Icons.free_breakfast),
+                                leading: Icon(Icons.free_breakfast),
                                 title: Text("Breakfast"),
                                 onTap: () =>
                                     _selectMeal("Breakfast"),
                               ),
                               ListTile(
-                                leading:
-                                    Icon(Icons.lunch_dining),
+                                leading: Icon(Icons.lunch_dining),
                                 title: Text("Lunch"),
                                 onTap: () =>
                                     _selectMeal("Lunch"),
                               ),
                               ListTile(
-                                leading:
-                                    Icon(Icons.dinner_dining),
+                                leading: Icon(Icons.dinner_dining),
                                 title: Text("Dinner"),
                                 onTap: () =>
                                     _selectMeal("Dinner"),
                               ),
                               ListTile(
-                                leading:
-                                    Icon(Icons.fastfood),
+                                leading: Icon(Icons.fastfood),
                                 title: Text("Snack"),
                                 onTap: () =>
                                     _selectMeal("Snack"),
@@ -309,58 +302,59 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
 
                 SizedBox(height: 30),
 
-                /* -------- IMAGE PREVIEW -------- */
+                meals.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Text(
+                            "No meals added yet",
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: meals.length,
+                        itemBuilder: (context, index) {
+                          final meal = meals[index];
 
+                          return Card(
+                            margin: EdgeInsets.symmetric(vertical: 8),
+                            child: ListTile(
+                              leading: File(meal.imagePath).existsSync()
+                                  ? Image.file(
+                                      File(meal.imagePath),
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Icon(Icons.fastfood, size: 40),
+
+                              title: Text(meal.type),
+
+                              subtitle: Text(
+                                DateFormat('hh:mm a')
+                                    .format(meal.time),
+                                style: TextStyle(fontSize: 14),
+                              ),
+
+                              trailing: IconButton(
+                                icon: Icon(Icons.delete,
+                                    color: Colors.red),
+                                onPressed: () {
+                                  setState(() {
+                                    meals.removeAt(index);
+                                  });
+                                  saveMeals();
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
 
                 SizedBox(height: 30),
-                meals.isEmpty
-    ? Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Text(
-            "No meals added yet",
-            style: TextStyle(fontSize: 16),
-          ),
-        ),
-      )
-    : ListView.builder(
-        shrinkWrap: true,
-        physics: NeverScrollableScrollPhysics(),
-        itemCount: meals.length,
-        itemBuilder: (context, index) {
-          final meal = meals[index];
-
-         return Card(
-  margin: EdgeInsets.symmetric(vertical: 8),
-  child: ListTile(
-    leading: Image.file(
-      File(meal.imagePath),
-      width: 50,
-      height: 50,
-      fit: BoxFit.cover,
-    ),
-    title: Text(meal.type),
-    subtitle: Text(
-        DateFormat('hh:mm a').format(meal.time),
-        style: TextStyle(fontSize: 14),
-    ),
-
-    
-    trailing: IconButton(
-      icon: Icon(Icons.delete, color: Colors.red),
-      onPressed: () {
-        setState(() {
-          meals.removeAt(index);
-        });
-        saveMeals();
-      },
-    ),
-  ),
-);
-        },
-      ),
-
-                /* -------- CALORIES CARD -------- */
 
                 Container(
                   padding: EdgeInsets.all(20),
