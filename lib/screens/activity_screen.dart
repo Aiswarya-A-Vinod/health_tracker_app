@@ -22,15 +22,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   List<Activity> activities = [];
 
-  Future saveBurnedCalories(double burned) async {
+  Future<void> saveBurnedCalories(double burned) async {
     final prefs = await SharedPreferences.getInstance();
-
     String today = DateTime.now().toString().split(" ")[0];
-
     await prefs.setDouble("burned_$today", burned);
   }
 
-  // FILTER TODAY'S ACTIVITIES
   List<Activity> get todayActivities {
     final now = DateTime.now();
 
@@ -41,7 +38,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
     }).toList();
   }
 
-  // TOTAL CALORIES (TODAY ONLY)
   double get totalCalories {
     double total = 0;
     for (var activity in todayActivities) {
@@ -50,7 +46,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
     return total;
   }
 
-  // ICON FUNCTION
   IconData getActivityIcon(String activityName) {
     switch (activityName) {
       case "Walking":
@@ -68,7 +63,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
     }
   }
 
-  // SAVE ACTIVITIES
   Future<void> saveActivities() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -78,7 +72,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
     await prefs.setStringList("activities", activityList);
   }
 
-  // LOAD ACTIVITIES
   Future<void> loadActivities() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -93,19 +86,17 @@ class _ActivityScreenState extends State<ActivityScreen> {
     }
   }
 
-  // CALCULATE CALORIES
-// CALCULATE CALORIES
-void calculate() async {
-  final duration = int.tryParse(durationController.text);
-  if (duration == null) return;
+  void calculate() async {
+    final duration = int.tryParse(durationController.text);
+    if (duration == null) return;
 
-  final met = metValues[selectedActivity]!;
+    final met = metValues[selectedActivity]!;
 
-  final result = calculateCalories(
-    met: met,
-    weight: widget.userWeight,
-    duration: duration,
-  );
+    final result = calculateCalories(
+      met: met,
+      weight: widget.userWeight,
+      duration: duration,
+    );
 
     setState(() {
       caloriesBurned = result;
@@ -120,30 +111,22 @@ void calculate() async {
       );
     });
 
-
     await saveBurnedCalories(totalCalories);
     await saveActivities();
-
-
-    saveActivities();
-
   }
 
   @override
   void initState() {
     super.initState();
     loadActivities();
-await saveBurnedCalories(totalCalories);
-await saveActivities();
-}
   }
 
-  
   @override
-void dispose() {
-  durationController.dispose();
-  super.dispose();
-}
+  void dispose() {
+    durationController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -162,16 +145,12 @@ void dispose() {
                     const Text(
                       "Total Calories Burned Today",
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     Text(
                       "${totalCalories.toStringAsFixed(0)} kcal",
                       style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -184,10 +163,8 @@ void dispose() {
               value: selectedActivity,
               isExpanded: true,
               items: metValues.keys
-                  .map((activity) => DropdownMenuItem(
-                        value: activity,
-                        child: Text(activity),
-                      ))
+                  .map((activity) =>
+                      DropdownMenuItem(value: activity, child: Text(activity)))
                   .toList(),
               onChanged: (value) {
                 setState(() {
@@ -222,13 +199,8 @@ void dispose() {
 
             const SizedBox(height: 20),
 
-            const Text(
-              "Today's Activities",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            const Text("Today's Activities",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
 
             const SizedBox(height: 10),
 
@@ -246,21 +218,19 @@ void dispose() {
                       ),
                       title: Text(activity.name),
                       subtitle: Text(
-                        "${activity.duration} minutes • ${DateFormat('hh:mm a').format(activity.time)}",
-                      ),
+                          "${activity.duration} minutes • ${DateFormat('hh:mm a').format(activity.time)}"),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                              "${activity.calories.toStringAsFixed(0)} kcal"),
+                          Text("${activity.calories.toStringAsFixed(0)} kcal"),
                           IconButton(
-                            icon:
-                                const Icon(Icons.delete, color: Colors.red),
+                            icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () {
                               setState(() {
                                 activities.remove(activity);
                               });
                               saveActivities();
+                              saveBurnedCalories(totalCalories);
                             },
                           ),
                         ],
