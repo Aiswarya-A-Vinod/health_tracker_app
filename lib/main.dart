@@ -3,6 +3,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 import 'dart:convert';
+import 'dart:async';
+import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/activity_screen.dart';
 import 'screens/reminders_screen.dart';
@@ -11,19 +13,21 @@ import 'analysis_screen_page.dart';
 import 'screens/medical_records_screen.dart';
 
 // ── Palette ──────────────────────────────────────────────
-const Color kScreenBg  = Color(0xFFFCE8EC);  // bright light pink screen bg
-const Color kMintBg    = Color(0xFFF5B8C0);  // bright light pink card bg (DOMINANT)
-const Color kMintLight = Color(0xFFFCE0E3);  // bright very light pink
-const Color kMintMid   = Color(0xFFE8849A);  // vivid mid pink accent
-const Color kMintDark  = Color(0xFFC95E78);  // vivid deep pink for buttons/FAB
-const Color kMintText  = Color(0xFF8B2D45);  // deep pink text
-const Color kPinkBg    = Color(0xFFEECBC7);  // terracotta card bg  (accent)
-const Color kPinkLight = Color(0xFFF5E0DE);  // very light terracotta
-const Color kPinkMid   = Color(0xFFC4847A);  // terracotta accent
-const Color kPinkDark  = Color(0xFFA9685F);  // base terracotta
-const Color kPinkText  = Color(0xFF6B3B34);  // terracotta text
-const Color kCalBg     = Color(0xFFFCE0E3);  // calendar bg — bright light pink
-
+const Color kScreenBg  = Color(0xFFF9FAFB);
+const Color kMintBg    = Color(0xFFF5B8C0);
+const Color kMintLight = Color(0xFFFCE0E3);
+const Color kMintMid   = Color(0xFFE8849A);
+const Color kMintDark  = Color(0xFFC95E78);
+const Color kMintText  = Color(0xFF8B2D45);
+const Color kPinkBg    = Color(0xFFEECBC7);
+const Color kPinkLight = Color(0xFFF5E0DE);
+const Color kPinkMid   = Color(0xFFC4847A);
+const Color kPinkDark  = Color(0xFFA9685F);
+const Color kPinkText  = Color(0xFF6B3B34);
+const Color kDark      = Color(0xFF1F2937);
+const Color kMid       = Color(0xFF6B7280);
+const Color kMuted     = Color(0xFF9CA3AF);
+const Color kWhite     = Color(0xFFFFFFFF);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,9 +69,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     AnalysisScreen(),
   ];
 
-  void _onItemTapped(int index) {
-    setState(() => _selectedIndex = index);
-  }
+  void _onItemTapped(int index) => setState(() => _selectedIndex = index);
 
   @override
   Widget build(BuildContext context) {
@@ -75,25 +77,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       body: _screens[_selectedIndex],
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(colors: [kMintLight, kPinkLight]),
-          border: Border(top: BorderSide(color: kMintMid, width: 1.5)),
+          color: kWhite,
+          border: Border(top: BorderSide(color: Color(0xFFF3F4F6), width: 1)),
         ),
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
-          selectedItemColor: kMintText,
-          unselectedItemColor: Color(0xFFB0A0B0),
+          selectedItemColor: kMintDark,
+          unselectedItemColor: kMuted,
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.transparent,
           elevation: 0,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
-          unselectedLabelStyle: const TextStyle(fontSize: 10),
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 9),
+          unselectedLabelStyle: const TextStyle(fontSize: 9),
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.directions_run),      label: "Activity"),
+            BottomNavigationBarItem(icon: Icon(Icons.directions_run),         label: "Activity"),
             BottomNavigationBarItem(icon: Icon(Icons.notifications_outlined), label: "Reminders"),
-            BottomNavigationBarItem(icon: Icon(Icons.restaurant_menu),     label: "Food"),
-            BottomNavigationBarItem(icon: Icon(Icons.folder_outlined),     label: "Records"),
-            BottomNavigationBarItem(icon: Icon(Icons.bar_chart),           label: "Analysis"),
+            BottomNavigationBarItem(icon: Icon(Icons.restaurant_menu),        label: "Food"),
+            BottomNavigationBarItem(icon: Icon(Icons.folder_outlined),        label: "Records"),
+            BottomNavigationBarItem(icon: Icon(Icons.bar_chart),              label: "Analysis"),
           ],
         ),
       ),
@@ -101,26 +103,110 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-/* ──────────────── MEAL MODEL (unchanged) ──────────────── */
+/* ──────────────── MEAL CONFIG ──────────────── */
+
+class _MealCfg {
+  final IconData icon;
+  final Color    bg;
+  final Color    border;
+  final String   emoji;
+  final int      calories;
+  final int      protein;
+  final int      carbs;
+  final int      fat;
+
+  const _MealCfg(
+    this.icon, this.bg, this.border, this.emoji,
+    this.calories, this.protein, this.carbs, this.fat,
+  );
+}
+
+const Map<String, _MealCfg> kMealConfig = {
+  'Breakfast': _MealCfg(Icons.free_breakfast, Color(0xFFFEF7E6), Color(0xFFF9D89A), '☕',  350, 18, 45, 10),
+  'Lunch':     _MealCfg(Icons.lunch_dining,   kMintBg,           kMintMid,           '🥗', 600, 35, 65, 18),
+  'Dinner':    _MealCfg(Icons.dinner_dining,  Color(0xFFF0ECF8), Color(0xFFD8C6F5), '🍽️', 700, 40, 72, 22),
+  'Snacks':    _MealCfg(Icons.fastfood,       kPinkBg,           kPinkMid,           '🍪', 150,  4, 22,  6),
+  'Others':    _MealCfg(Icons.rice_bowl,      kPinkLight,        kPinkMid,           '🍱', 300, 12, 38,  9),
+};
+
+/* ──────────────── MEAL MODEL ──────────────── */
 
 class Meal {
-  final String type;
-  final String imagePath;
+  final String   type;
+  final String   imagePath;
   final DateTime time;
+  final int      calories;
+  final int      protein;
+  final int      carbs;
+  final int      fat;
 
-  Meal({required this.type, required this.imagePath, required this.time});
+  Meal({
+    required this.type,
+    required this.imagePath,
+    required this.time,
+    required this.calories,
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+  });
 
   Map<String, dynamic> toJson() => {
-        'type': type,
-        'imagePath': imagePath,
-        'time': time.toIso8601String(),
-      };
+    'type':      type,
+    'imagePath': imagePath,
+    'time':      time.toIso8601String(),
+    'calories':  calories,
+    'protein':   protein,
+    'carbs':     carbs,
+    'fat':       fat,
+  };
 
-  factory Meal.fromJson(Map<String, dynamic> json) => Meal(
-        type: json['type'],
-        imagePath: json['imagePath'],
-        time: DateTime.parse(json['time']),
-      );
+  factory Meal.fromJson(Map<String, dynamic> json) {
+    final cfg = kMealConfig[json['type']] ?? kMealConfig['Others']!;
+    return Meal(
+      type:      json['type'],
+      imagePath: json['imagePath'],
+      time:      DateTime.parse(json['time']),
+      calories:  json['calories'] ?? cfg.calories,
+      protein:   json['protein']  ?? cfg.protein,
+      carbs:     json['carbs']    ?? cfg.carbs,
+      fat:       json['fat']      ?? cfg.fat,
+    );
+  }
+}
+
+/* ──────────────── CIRCULAR PROGRESS PAINTER ──────────────── */
+
+class _RingPainter extends CustomPainter {
+  final double progress;
+  final Color  ringColor;
+  final Color  trackColor;
+
+  _RingPainter({required this.progress, required this.ringColor, required this.trackColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final r  = math.min(cx, cy) - 6;
+    final rect = Rect.fromCircle(center: Offset(cx, cy), radius: r);
+
+    // Track
+    canvas.drawArc(rect, -math.pi / 2, 2 * math.pi, false,
+        Paint()..color = trackColor..style = PaintingStyle.stroke..strokeWidth = 7..strokeCap = StrokeCap.round);
+
+    // Progress
+    if (progress > 0) {
+      canvas.drawArc(rect, -math.pi / 2, 2 * math.pi * progress.clamp(0, 1), false,
+          Paint()
+            ..color = ringColor
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 7
+            ..strokeCap = StrokeCap.round);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter old) => old.progress != progress;
 }
 
 /* ──────────────── FOOD LOGGING SCREEN ──────────────── */
@@ -131,23 +217,17 @@ class FoodLoggingScreen extends StatefulWidget {
 }
 
 class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
-  List<Meal> meals        = [];
-  String? _selectedMeal;
-  final ImagePicker _picker = ImagePicker();
+  List<Meal>   meals           = [];
+  String?      _selectedMeal;
+  int?         _expandedIndex;
+  final        _picker = ImagePicker();
+  late Timer   _clockTimer;
+  String       _clockLabel = '';
 
   DateTime _calendarMonth = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime _selectedDate  = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
-  static const int kGoal       = 2000;
-  static const int kCalPerMeal = 250;
-
-  // ── Meal type config ──────────────────────────────────
-  static const Map<String, _MealCfg> mealConfig = {
-    'Breakfast': _MealCfg(Icons.free_breakfast, Color(0xFFFEF7E6), Color(0xFFF9D89A), '☕'),
-    'Lunch':     _MealCfg(Icons.lunch_dining,   kMintBg,           kMintMid,           '🥗'),
-    'Dinner':    _MealCfg(Icons.dinner_dining,  Color(0xFFF0ECF8), Color(0xFFD8C6F5), '🍽️'),
-    'Snack':     _MealCfg(Icons.fastfood,       kPinkBg,           kPinkMid,           '🍪'),
-  };
+  static const int kGoal = 2000;
 
   // ── Helpers ───────────────────────────────────────────
   String _dateKey(DateTime d) =>
@@ -156,22 +236,44 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
   List<Meal> mealsForDate(DateTime d) =>
       meals.where((m) => _dateKey(m.time) == _dateKey(d)).toList();
 
-  int calForDate(DateTime d) => mealsForDate(d).length * kCalPerMeal;
+  int calForDate(DateTime d) =>
+      mealsForDate(d).fold(0, (sum, m) => sum + m.calories);
 
-  int get totalCalories => mealsForDate(_selectedDate).length * kCalPerMeal;
+  int get totalCalories =>
+      mealsForDate(_selectedDate).fold(0, (sum, m) => sum + m.calories);
+
+  int get totalProtein =>
+      mealsForDate(_selectedDate).fold(0, (sum, m) => sum + m.protein);
+
+  int get totalCarbs =>
+      mealsForDate(_selectedDate).fold(0, (sum, m) => sum + m.carbs);
+
+  int get totalFat =>
+      mealsForDate(_selectedDate).fold(0, (sum, m) => sum + m.fat);
+
+  String _formatClock() => DateFormat('hh:mm a').format(DateTime.now());
 
   // ── Lifecycle ─────────────────────────────────────────
   @override
   void initState() {
     super.initState();
+    _clockLabel = _formatClock();
+    _clockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() => _clockLabel = _formatClock());
+    });
     loadMeals();
   }
 
-  // ── Storage (unchanged from original) ─────────────────
+  @override
+  void dispose() {
+    _clockTimer.cancel();
+    super.dispose();
+  }
+
+  // ── Storage ───────────────────────────────────────────
   Future<void> saveMeals() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
-        'meals', meals.map((m) => jsonEncode(m.toJson())).toList());
+    await prefs.setStringList('meals', meals.map((m) => jsonEncode(m.toJson())).toList());
   }
 
   Future<void> saveDailyCalories() async {
@@ -184,9 +286,7 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
     final prefs = await SharedPreferences.getInstance();
     final list  = prefs.getStringList('meals');
     if (list != null) {
-      setState(() {
-        meals = list.map((s) => Meal.fromJson(jsonDecode(s))).toList();
-      });
+      setState(() => meals = list.map((s) => Meal.fromJson(jsonDecode(s))).toList());
     }
   }
 
@@ -194,8 +294,18 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
   Future<void> _pickImage(ImageSource source) async {
     final XFile? photo = await _picker.pickImage(source: source);
     if (photo != null && _selectedMeal != null) {
+      final cfg = kMealConfig[_selectedMeal!] ?? kMealConfig['Others']!;
       setState(() {
-        meals.add(Meal(type: _selectedMeal!, imagePath: photo.path, time: DateTime.now()));
+        meals.add(Meal(
+          type:      _selectedMeal!,
+          imagePath: photo.path,
+          time:      DateTime.now(),
+          calories:  cfg.calories,
+          protein:   cfg.protein,
+          carbs:     cfg.carbs,
+          fat:       cfg.fat,
+        ));
+        _expandedIndex = null;
       });
       saveMeals();
       saveDailyCalories();
@@ -224,7 +334,7 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => _SourceSheet(
-        mealType: _selectedMeal ?? '',
+        mealType:  _selectedMeal ?? '',
         onCamera:  () { Navigator.pop(context); _pickImage(ImageSource.camera); },
         onGallery: () { Navigator.pop(context); _pickImage(ImageSource.gallery); },
         onBack:    () { Navigator.pop(context); _showAddSheet(); },
@@ -234,7 +344,10 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
 
   // ── Delete ────────────────────────────────────────────
   void _deleteMeal(Meal meal) {
-    setState(() => meals.remove(meal));
+    setState(() {
+      meals.remove(meal);
+      _expandedIndex = null;
+    });
     saveMeals();
   }
 
@@ -257,9 +370,8 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
             children: [
               _buildHeader(eaten, left, pct, isToday),
               _buildCalendar(),
-              _buildMealsSection(selMeals, isToday),
-              _buildSummary(selMeals, eaten, left),
-              const SizedBox(height: 24),
+              _buildMealsSection(selMeals, isToday, eaten),
+              const SizedBox(height: 80),
             ],
           ),
         ),
@@ -267,67 +379,163 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
     );
   }
 
-  // ── Header with calorie card ──────────────────────────
+  // ── Header ────────────────────────────────────────────
   Widget _buildHeader(int eaten, int left, double pct, bool isToday) {
+    final isOver  = left < 0;
+    final pctNum  = (pct * 100).round();
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 40, 20, 24),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [kMintBg, kPinkLight, kPinkBg],
+          colors: [kMintDark, kMintBg, kPinkBg],
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            isToday ? 'TODAY' : DateFormat('d MMM yyyy').format(_selectedDate).toUpperCase(),
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 2, color: kMintText),
+          // Title row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isToday ? 'TODAY' : DateFormat('d MMM yyyy').format(_selectedDate).toUpperCase(),
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 3, color: Colors.white70),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text('Food Tracker 🍽', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: kWhite)),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time_rounded, size: 12, color: Colors.white60),
+                      const SizedBox(width: 4),
+                      Text(_clockLabel, style: const TextStyle(fontSize: 11, color: Colors.white60)),
+                    ],
+                  ),
+                ],
+              ),
+              // Avatar
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: kMintLight,
+                  border: Border.all(color: Colors.white38, width: 2),
+                ),
+                child: const Center(
+                  child: Text('JD', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: kMintText)),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          const Text('Food Tracker 🍽', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
-          const SizedBox(height: 2),
-          const Text('Track your daily meals', style: TextStyle(fontSize: 13, color: Color(0xFFA78CA0))),
-          const SizedBox(height: 16),
+
+          const SizedBox(height: 20),
+
+          // Calorie card
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [kMintLight, kPinkLight]),
+              color: kWhite,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: kMintMid, width: 1.5),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 2))],
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 20, offset: const Offset(0, 4))],
             ),
             child: Column(
               children: [
+                // Ring + stats row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _statColumn('EATEN', '$eaten kcal', kMintText, CrossAxisAlignment.start),
-                    Container(
-                      width: 48, height: 48,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(colors: [kMintDark, Color(0xFF6EE7B7)]),
-                      ),
-                      child: const Icon(Icons.local_fire_department, color: Colors.white, size: 22),
+                    // EATEN
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('EATEN', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1.5, color: kMid)),
+                        const SizedBox(height: 4),
+                        Text('$eaten', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kMintText)),
+                        Text('kcal', style: TextStyle(fontSize: 9, color: kMuted)),
+                      ],
                     ),
-                    _statColumn('LEFT', '${left.abs()} kcal', left >= 0 ? kMintText : Colors.red, CrossAxisAlignment.end),
+
+                    // Circular ring
+                    SizedBox(
+                      width: 70, height: 70,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          CustomPaint(
+                            size: const Size(70, 70),
+                            painter: _RingPainter(
+                              progress:   pct,
+                              ringColor:  isOver ? kPinkDark : kMintDark,
+                              trackColor: const Color(0xFFF3F4F6),
+                            ),
+                          ),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.local_fire_department_rounded, size: 16, color: kMintDark),
+                              Text('$pctNum%', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: kMintText)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // LEFT / OVER
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(isOver ? 'OVER' : 'LEFT', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1.5, color: kMid)),
+                        const SizedBox(height: 4),
+                        Text('${left.abs()}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isOver ? Colors.red : kMintText)),
+                        Text('kcal', style: TextStyle(fontSize: 9, color: kMuted)),
+                      ],
+                    ),
                   ],
                 ),
+
                 const SizedBox(height: 12),
+
+                // Progress bar
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
-                    value: pct, minHeight: 10,
-                    backgroundColor: kMintMid,
-                    valueColor: AlwaysStoppedAnimation<Color>(pct > 0.95 ? kPinkDark : kMintDark),
+                    value: pct,
+                    minHeight: 8,
+                    backgroundColor: const Color(0xFFF3F4F6),
+                    valueColor: AlwaysStoppedAnimation<Color>(isOver ? kPinkDark : kMintDark),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text('Goal: $kGoal kcal', style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF))),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('0', style: TextStyle(fontSize: 9, color: kMuted)),
+                    Text('Goal: $kGoal kcal', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: kMid)),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Macro pills
+                Container(
+                  padding: const EdgeInsets.only(top: 12),
+                  decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFF9FAFB)))),
+                  child: Row(
+                    children: [
+                      _macroPill('Protein', totalProtein, 'g', const Color(0xFF6366F1)),
+                      const SizedBox(width: 8),
+                      _macroPill('Carbs', totalCarbs, 'g', kMintDark),
+                      const SizedBox(width: 8),
+                      _macroPill('Fat', totalFat, 'g', kPinkMid),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -337,14 +545,22 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
     );
   }
 
-  Widget _statColumn(String label, String value, Color valueColor, CrossAxisAlignment align) {
-    return Column(
-      crossAxisAlignment: align,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1.5, color: Color(0xFF6B7280))),
-        const SizedBox(height: 2),
-        Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: valueColor)),
-      ],
+  Widget _macroPill(String label, int val, String unit, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: kScreenBg,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Text('$val$unit', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
+            const SizedBox(height: 2),
+            Text(label, style: const TextStyle(fontSize: 8, color: kMuted)),
+          ],
+        ),
+      ),
     );
   }
 
@@ -357,12 +573,11 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: kCalBg,
+          color: kWhite,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: kPinkMid, width: 1.5),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2))],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 10, offset: const Offset(0, 2))],
         ),
         child: Column(
           children: [
@@ -374,23 +589,25 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
                     _calendarMonth = DateTime(_calendarMonth.year, _calendarMonth.month - 1))),
                 Text(
                   DateFormat('MMMM yyyy').format(_calendarMonth),
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF374151)),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: kDark),
                 ),
                 _calNavBtn(Icons.chevron_right, () => setState(() =>
                     _calendarMonth = DateTime(_calendarMonth.year, _calendarMonth.month + 1))),
               ],
             ),
-            const SizedBox(height: 10),
-            // Day-of-week row
+            const SizedBox(height: 12),
+            // Weekday headers
             Row(
               children: ['Su','Mo','Tu','We','Th','Fr','Sa']
                   .map((d) => Expanded(
-                        child: Center(child: Text(d, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: kPinkText))),
+                        child: Center(
+                          child: Text(d, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: kMid)),
+                        ),
                       ))
                   .toList(),
             ),
-            const SizedBox(height: 4),
-            // Grid
+            const SizedBox(height: 6),
+            // Day grid
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -403,7 +620,7 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
                 final day     = i - startOffset + 1;
                 final dayDate = DateTime(_calendarMonth.year, _calendarMonth.month, day);
                 final isSel   = _dateKey(dayDate) == _dateKey(_selectedDate);
-                final cal     = calForDate(dayDate);
+                final hasLog  = calForDate(dayDate) > 0;
 
                 return GestureDetector(
                   onTap: () => setState(() => _selectedDate = dayDate),
@@ -416,40 +633,32 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: isSel
-                              ? const LinearGradient(colors: [kPinkDark, Color(0xFFFB7AC0)])
+                              ? const LinearGradient(colors: [kMintDark, kMintMid])
                               : null,
                           boxShadow: isSel
-                              ? [BoxShadow(color: kPinkDark.withOpacity(0.3), blurRadius: 6)]
+                              ? [BoxShadow(color: kMintDark.withOpacity(0.4), blurRadius: 8)]
                               : null,
                         ),
                         child: Center(
                           child: Text(
                             '$day',
                             style: TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.w600,
-                              color: isSel ? Colors.white : const Color(0xFF374151),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isSel ? kWhite : kDark,
                             ),
                           ),
                         ),
                       ),
-                      if (cal > 0)
+                      // Dot indicator for days with logged meals
+                      if (hasLog && !isSel)
                         Container(
-                          margin: const EdgeInsets.only(top: 1),
-                          padding: const EdgeInsets.symmetric(horizontal: 3),
-                          decoration: BoxDecoration(
-                            color: isSel ? Colors.white.withOpacity(0.35) : kMintMid,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            '$cal',
-                            style: TextStyle(
-                              fontSize: 7, fontWeight: FontWeight.bold,
-                              color: isSel ? Colors.white : kMintText,
-                            ),
-                          ),
+                          margin: const EdgeInsets.only(top: 2),
+                          width: 4, height: 4,
+                          decoration: const BoxDecoration(shape: BoxShape.circle, color: kMintDark),
                         )
                       else
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                     ],
                   ),
                 );
@@ -462,110 +671,76 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
   }
 
   // ── Meals section ─────────────────────────────────────
-  Widget _buildMealsSection(List<Meal> selMeals, bool isToday) {
+  Widget _buildMealsSection(List<Meal> selMeals, bool isToday, int eaten) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                isToday ? "Today's Meals" : 'Meals — ${DateFormat('d MMM').format(_selectedDate)}',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF374151)),
-              ),
-              Row(
-                children: mealConfig.keys.map((type) {
-                  final cnt = selMeals.where((m) => m.type == type).length;
-                  if (cnt == 0) return const SizedBox.shrink();
-                  final cfg = mealConfig[type]!;
-                  return Container(
-                    margin: const EdgeInsets.only(left: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: cfg.bg,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: cfg.border),
-                    ),
-                    child: Text('${cfg.emoji} $cnt', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF555555))),
-                  );
-                }).toList(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isToday ? "Today's Meals" : 'Meals — ${DateFormat('d MMM').format(_selectedDate)}',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: kDark),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${selMeals.length} logged · $eaten kcal total',
+                    style: const TextStyle(fontSize: 10, color: kMuted),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          selMeals.isEmpty
-              ? Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 36),
-                  decoration: BoxDecoration(
-                    color: kMintLight,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: kMintMid, width: 1.5),
-                  ),
-                  child: const Column(
-                    children: [
-                      Text('🥗', style: TextStyle(fontSize: 36)),
-                      SizedBox(height: 8),
-                      Text('No meals logged yet', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kMintText)),
-                      SizedBox(height: 4),
-                      Text('Tap + to add your first meal', style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
-                    ],
-                  ),
-                )
-              : Column(
-                  children: selMeals.asMap().entries.map((e) {
-                    final idx  = e.key;
-                    final meal = e.value;
-                    return _MealCard(
-                      meal: meal,
-                      cfg: mealConfig[meal.type] ?? mealConfig['Snack']!,
-                      cardBg:     idx.isEven ? kMintLight : kPinkLight,
-                      cardBorder: idx.isEven ? kMintMid   : kPinkMid,
-                      onDelete: () => _deleteMeal(meal),
-                    );
-                  }).toList(),
-                ),
-        ],
-      ),
-    );
-  }
+          const SizedBox(height: 12),
 
-  // ── Summary card ──────────────────────────────────────
-  Widget _buildSummary(List<Meal> selMeals, int eaten, int left) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [kPinkBg, kPinkLight, kMintLight]),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: kPinkMid, width: 1.5),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2))],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Today's Calories", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: kPinkText)),
-            const SizedBox(height: 4),
-            Text('$eaten kcal', style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _summaryTile('Meals', '${selMeals.length}', kPinkBg, kPinkMid, kPinkText, isLeft: true),
-                _summaryTile('Goal', '$kGoal', kMintBg, kMintMid, kMintText),
-                _summaryTile(
-                  left >= 0 ? 'Left' : 'Over',
-                  '${left.abs()}',
-                  left >= 0 ? kMintBg : kPinkBg,
-                  left >= 0 ? kMintMid : kPinkMid,
-                  left >= 0 ? kMintText : const Color(0xFFE11D48),
-                  isRight: true,
-                ),
-              ],
+          // Empty state
+          if (selMeals.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              decoration: BoxDecoration(
+                color: kWhite,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 2))],
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 64, height: 64,
+                    decoration: const BoxDecoration(shape: BoxShape.circle, color: kMintLight),
+                    child: const Icon(Icons.camera_alt_outlined, size: 28, color: kMintText),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('No meals logged yet', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kMintText)),
+                  const SizedBox(height: 4),
+                  const Text('Tap + to log your first meal', style: TextStyle(fontSize: 11, color: kMuted)),
+                ],
+              ),
+            )
+          else
+            // Meal cards
+            Column(
+              children: List.generate(selMeals.length, (idx) {
+                final meal     = selMeals[idx];
+                final cfg      = kMealConfig[meal.type] ?? kMealConfig['Others']!;
+                final expanded = _expandedIndex == idx;
+                return _MealCard(
+                  meal:      meal,
+                  cfg:       cfg,
+                  expanded:  expanded,
+                  onTap:     () => setState(() => _expandedIndex = expanded ? null : idx),
+                  onDelete:  () => _deleteMeal(meal),
+                );
+              }),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -575,76 +750,47 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
     return GestureDetector(
       onTap: _showAddSheet,
       child: Container(
-        width: 56, height: 56,
-        decoration: const BoxDecoration(
+        width: 52, height: 52,
+        decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: LinearGradient(colors: [kMintDark, Color(0xFF6EE7B7)]),
-          boxShadow: [BoxShadow(color: Color(0x4016A34A), blurRadius: 10, offset: Offset(0, 4))],
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [kMintDark, kMintMid],
+          ),
+          boxShadow: [BoxShadow(color: kMintDark.withOpacity(0.5), blurRadius: 16, offset: const Offset(0, 6))],
         ),
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
+        child: const Icon(Icons.add, color: kWhite, size: 26),
       ),
     );
   }
 
-  // ── Small helpers ─────────────────────────────────────
   Widget _calNavBtn(IconData icon, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 28, height: 28,
-        decoration: const BoxDecoration(shape: BoxShape.circle, color: kPinkBg),
-        child: Icon(icon, size: 14, color: kPinkText),
-      ),
-    );
-  }
-
-  Widget _summaryTile(String label, String val, Color bg, Color border, Color textColor,
-      {bool isLeft = false, bool isRight = false}) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: bg,
-          border: Border.all(color: border, width: 1.5),
-          borderRadius: BorderRadius.horizontal(
-            left:  isLeft  ? const Radius.circular(12) : Radius.zero,
-            right: isRight ? const Radius.circular(12) : Radius.zero,
-          ),
-        ),
-        child: Column(
-          children: [
-            Text(label.toUpperCase(), style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 1, color: Color(0xFF9CA3AF))),
-            const SizedBox(height: 2),
-            Text(val, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor)),
-          ],
-        ),
+        width: 30, height: 30,
+        decoration: const BoxDecoration(shape: BoxShape.circle, color: kMintLight),
+        child: Icon(icon, size: 16, color: kMintText),
       ),
     );
   }
 }
 
-/* ──────────────── MEAL CONFIG ──────────────── */
-
-class _MealCfg {
-  final IconData icon;
-  final Color bg;
-  final Color border;
-  final String emoji;
-  const _MealCfg(this.icon, this.bg, this.border, this.emoji);
-}
-
-/* ──────────────── MEAL CARD ──────────────── */
+/* ──────────────── MEAL CARD (expandable) ──────────────── */
 
 class _MealCard extends StatelessWidget {
-  final Meal meal;
-  final _MealCfg cfg;
-  final Color cardBg;
-  final Color cardBorder;
+  final Meal         meal;
+  final _MealCfg     cfg;
+  final bool         expanded;
+  final VoidCallback onTap;
   final VoidCallback onDelete;
 
   const _MealCard({
-    required this.meal, required this.cfg,
-    required this.cardBg, required this.cardBorder,
+    required this.meal,
+    required this.cfg,
+    required this.expanded,
+    required this.onTap,
     required this.onDelete,
   });
 
@@ -653,81 +799,123 @@ class _MealCard extends StatelessWidget {
     final hasPhoto = meal.imagePath.isNotEmpty && File(meal.imagePath).existsSync();
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: cardBg,
+        color: kWhite,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: cardBorder, width: 1.5),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2))],
-      ),
-      child: Row(
-        children: [
-          // Meal photo or emoji
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: hasPhoto
-                ? Image.file(File(meal.imagePath), width: 48, height: 48, fit: BoxFit.cover)
-                : Container(
-                    width: 46, height: 46,
-                    decoration: BoxDecoration(
-                      color: cfg.bg,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: cfg.border, width: 1.5),
-                    ),
-                    child: Center(child: Text(cfg.emoji, style: const TextStyle(fontSize: 22))),
-                  ),
-          ),
-          const SizedBox(width: 12),
-          // Meal info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(meal.type, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1F2937))),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: cfg.bg,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: cfg.border),
-                      ),
-                      child: Text(meal.type, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF555555))),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(DateFormat('hh:mm a').format(meal.time), style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF))),
-                    if (hasPhoto) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                        decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(20)),
-                        child: const Text('📷 Photo', style: TextStyle(fontSize: 9, color: Color(0xFF3B82F6), fontWeight: FontWeight.w600)),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-          // Calories + delete
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              const Text('🔥 250 kcal', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: kMintText)),
-              const SizedBox(height: 6),
-              GestureDetector(
-                onTap: onDelete,
-                child: Container(
-                  width: 26, height: 26,
-                  decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFFFE4E6)),
-                  child: const Icon(Icons.delete_outline, size: 14, color: Color(0xFFF87171)),
-                ),
-              ),
-            ],
+        border: Border.all(
+          color: expanded ? kMintMid : Colors.transparent,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: expanded
+                ? kMintDark.withOpacity(0.15)
+                : Colors.black.withOpacity(0.07),
+            blurRadius: expanded ? 16 : 10,
+            offset: const Offset(0, 2),
           ),
         ],
+      ),
+      child: Column(
+        children: [
+          // Main row (tappable)
+          GestureDetector(
+            onTap: onTap,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  // Emoji/photo avatar
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(100),
+                    child: hasPhoto
+                        ? Image.file(File(meal.imagePath), width: 48, height: 48, fit: BoxFit.cover)
+                        : Container(
+                            width: 48, height: 48,
+                            color: cfg.bg,
+                            child: Center(child: Text(cfg.emoji, style: const TextStyle(fontSize: 22))),
+                          ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(meal.type, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: kDark)),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${DateFormat('hh:mm a').format(meal.time)} · ${meal.calories} kcal',
+                          style: const TextStyle(fontSize: 10, color: kMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Badge + delete
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(color: kMintLight, borderRadius: BorderRadius.circular(20)),
+                        child: const Text('✓', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: kMintText)),
+                      ),
+                      const SizedBox(width: 6),
+                      GestureDetector(
+                        onTap: onDelete,
+                        child: Container(
+                          width: 32, height: 32,
+                          decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFFEE2E2)),
+                          child: const Icon(Icons.delete_outline, size: 15, color: Color(0xFFEF4444)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Expanded macro detail
+          if (expanded)
+            Container(
+              margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              decoration: BoxDecoration(
+                color: kMintLight,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  _expandMacro('Protein', meal.protein, 'g', const Color(0xFF6366F1)),
+                  _expandMacro('Carbs', meal.carbs, 'g', kMintDark),
+                  _expandMacro('Fat', meal.fat, 'g', kPinkMid),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _expandMacro(String label, int val, String unit, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          color: Colors.white60,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: [
+            Text('$val$unit', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color)),
+            const SizedBox(height: 2),
+            Text(label, style: const TextStyle(fontSize: 8, color: kMid)),
+          ],
+        ),
       ),
     );
   }
@@ -739,57 +927,56 @@ class _MealTypeSheet extends StatelessWidget {
   final void Function(String) onSelect;
   const _MealTypeSheet({required this.onSelect});
 
-  static const Map<String, _MealCfg> _cfg = {
-    'Breakfast': _MealCfg(Icons.free_breakfast, Color(0xFFFEF7E6), Color(0xFFF9D89A), '☕'),
-    'Lunch':     _MealCfg(Icons.lunch_dining,   kMintBg,           kMintMid,           '🥗'),
-    'Dinner':    _MealCfg(Icons.dinner_dining,  Color(0xFFF0ECF8), Color(0xFFD8C6F5), '🍽️'),
-    'Snack':     _MealCfg(Icons.fastfood,       kPinkBg,           kPinkMid,           '🍪'),
-  };
-
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter, end: Alignment.bottomCenter,
-          colors: [kPinkLight, kMintLight],
-        ),
+        color: kWhite,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _sheetHeader('Select Meal Type', context),
+          // Handle
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 16),
-          ..._cfg.entries.map((e) {
-            final cfg = e.value;
-            return GestureDetector(
-              onTap: () => onSelect(e.key),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: cfg.bg,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: cfg.border, width: 1.5),
+          _sheetHeader('Select Meal Type', context),
+          const SizedBox(height: 20),
+          // 5-column grid
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: kMealConfig.entries.map((e) {
+              final cfg = e.value;
+              return GestureDetector(
+                onTap: () => onSelect(e.key),
+                child: Container(
+                  width: 60,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: cfg.bg,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(cfg.emoji, style: const TextStyle(fontSize: 26)),
+                      const SizedBox(height: 6),
+                      Text(
+                        e.key,
+                        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: kDark),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${cfg.calories} kcal',
+                        style: const TextStyle(fontSize: 8, color: kMuted),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36, height: 36,
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.7)),
-                      child: Icon(cfg.icon, size: 18, color: const Color(0xFF555555)),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(e.key, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF1F2937))),
-                    const Spacer(),
-                    const Icon(Icons.chevron_right, size: 16, color: Color(0xFF9CA3AF)),
-                  ],
-                ),
-              ),
-            );
-          }),
+              );
+            }).toList(),
+          ),
         ],
       ),
     );
@@ -799,54 +986,74 @@ class _MealTypeSheet extends StatelessWidget {
 /* ──────────────── BOTTOM SHEET: CHOOSE SOURCE ──────────────── */
 
 class _SourceSheet extends StatelessWidget {
-  final String mealType;
+  final String       mealType;
   final VoidCallback onCamera;
   final VoidCallback onGallery;
   final VoidCallback onBack;
 
   const _SourceSheet({
-    required this.mealType, required this.onCamera,
-    required this.onGallery, required this.onBack,
+    required this.mealType,
+    required this.onCamera,
+    required this.onGallery,
+    required this.onBack,
   });
 
   @override
   Widget build(BuildContext context) {
+    final cfg = kMealConfig[mealType] ?? kMealConfig['Others']!;
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter, end: Alignment.bottomCenter,
-          colors: [kPinkLight, kMintLight],
-        ),
+        color: kWhite,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _sheetHeader('Add $mealType', context),
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 16),
-          // Camera
+          // Header with back button
+          Row(
+            children: [
+              GestureDetector(
+                onTap: onBack,
+                child: Container(
+                  width: 30, height: 30,
+                  decoration: const BoxDecoration(shape: BoxShape.circle, color: kMintLight),
+                  child: const Icon(Icons.chevron_left, size: 18, color: kMintText),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '${cfg.emoji} $mealType · ${cfg.calories} kcal',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: kDark),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 28, height: 28,
+                  decoration: const BoxDecoration(shape: BoxShape.circle, color: kMintLight),
+                  child: const Icon(Icons.close, size: 14, color: kMintText),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Camera option
           _sourceOption(
-            icon: Icons.camera_alt, iconBg: kMintDark, cardBg: kMintBg, cardBorder: kMintMid,
-            title: 'Take Photo', subtitle: 'Open camera and capture your meal',
+            icon: Icons.camera_alt_rounded, iconGradient: [kMintDark, kMintMid],
+            cardBg: kMintLight, title: 'Camera', subtitle: 'Take a photo',
             onTap: onCamera,
           ),
           const SizedBox(height: 10),
-          // Gallery
+
+          // Upload option
           _sourceOption(
-            icon: Icons.photo_library_outlined, iconBg: kPinkDark, cardBg: kPinkBg, cardBorder: kPinkMid,
-            title: 'Upload from Gallery', subtitle: 'Choose a photo from your files',
+            icon: Icons.photo_library_outlined, iconGradient: [kPinkDark, kPinkMid],
+            cardBg: kPinkLight, title: 'Upload File', subtitle: 'Choose from gallery',
             onTap: onGallery,
-          ),
-          const SizedBox(height: 14),
-          GestureDetector(
-            onTap: onBack,
-            child: const Row(
-              children: [
-                Icon(Icons.chevron_left, size: 16, color: kPinkText),
-                Text('Back', style: TextStyle(fontSize: 13, color: kPinkText, fontWeight: FontWeight.w600)),
-              ],
-            ),
           ),
         ],
       ),
@@ -854,34 +1061,39 @@ class _SourceSheet extends StatelessWidget {
   }
 
   Widget _sourceOption({
-    required IconData icon, required Color iconBg,
-    required Color cardBg, required Color cardBorder,
-    required String title, required String subtitle,
+    required IconData    icon,
+    required List<Color> iconGradient,
+    required Color       cardBg,
+    required String      title,
+    required String      subtitle,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: cardBorder, width: 1.5),
         ),
         child: Row(
           children: [
             Container(
-              width: 44, height: 44,
-              decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: Colors.white, size: 22),
+              width: 52, height: 52,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: iconGradient),
+                borderRadius: BorderRadius.circular(100),
+                boxShadow: [BoxShadow(color: iconGradient.first.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: Icon(icon, color: kWhite, size: 24),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1F2937))),
+                Text(title,    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: kDark)),
                 const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+                Text(subtitle, style: const TextStyle(fontSize: 11, color: kMuted)),
               ],
             ),
           ],
@@ -897,15 +1109,16 @@ Widget _sheetHeader(String title, BuildContext context) {
   return Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
-      Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
+      Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: kDark)),
       GestureDetector(
         onTap: () => Navigator.pop(context),
         child: Container(
           width: 28, height: 28,
-          decoration: const BoxDecoration(shape: BoxShape.circle, color: kPinkBg),
-          child: const Icon(Icons.close, size: 14, color: kPinkText),
+          decoration: const BoxDecoration(shape: BoxShape.circle, color: kMintLight),
+          child: const Icon(Icons.close, size: 14, color: kMintText),
         ),
       ),
     ],
   );
 }
+
