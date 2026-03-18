@@ -380,6 +380,7 @@ class _MedicalRecordsScreenState extends State<MedicalRecordsScreen>
   void _showAddConditionSheet({required bool isPast}) {
     final nameCtrl   = TextEditingController();
     final startCtrl  = TextEditingController();
+    final durationCtrl = TextEditingController();
     final rxCtrl     = TextEditingController();
     final notesCtrl  = TextEditingController();
     final periodCtrl = TextEditingController();
@@ -413,7 +414,7 @@ class _MedicalRecordsScreenState extends State<MedicalRecordsScreen>
                   _formField('Time Period', 'e.g. Jan 2024 – Feb 2024', periodCtrl),
                 ],
                 const SizedBox(height: 12),
-                _formField('Duration', 'e.g. 3 weeks', startCtrl),
+                _formField("Duration", "e.g. 3 weeks", durationCtrl),
                 const SizedBox(height: 12),
                 _formField('Prescriptions', 'e.g. Metformin 500mg, Dolo 650mg', rxCtrl),
                 const SizedBox(height: 12),
@@ -429,7 +430,7 @@ class _MedicalRecordsScreenState extends State<MedicalRecordsScreen>
                       status: isPast ? 'Recovered' : 'Ongoing',
                       summary: '',
                       startDate: startCtrl.text.trim(),
-                      duration: startCtrl.text.trim(),
+                      duration: durationCtrl.text.trim(),
                       prescriptions: rxCtrl.text
                           .split(',')
                           .map((s) => s.trim())
